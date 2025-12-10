@@ -1,0 +1,17 @@
+
+    {
+        "id":1,
+        "title":"The Witcher",
+        "year":2019,
+        "seasons":3,
+        "episodes":24
+    }
+
+    {
+        "id":2,
+        "title":"Arcane",
+        "year":2021,
+        "seasons":1,
+        "episodes":9
+    }
+

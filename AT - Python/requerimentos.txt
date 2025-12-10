@@ -1,0 +1,11 @@
+
+### 2. `requerimentos.txt`
+
+Lista as dependências que precisam ser instaladas.
+
+```txt
+requests # (Opcional, se você for trocar urllib por requests)
+urllib3 # (Módulo usado no scraping, mas geralmente incluso no ambiente)
+beautifulsoup4
+pandas
+SQLAlchemy

@@ -1,0 +1,1101 @@
+import urllib.request
+
+from bs4 import BeautifulSoup
+
+import pandas as pd
+
+import time
+
+from sqlalchemy import create_engine, Column, Integer, String, Float
+
+from sqlalchemy.orm import sessionmaker
+
+from sqlalchemy.ext.declarative import declarative_base
+
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+
+import os
+
+
+
+def extrair_dados_imdb():
+
+    URL = "https://www.imdb.com/pt/chart/top/"
+
+    headers = {
+
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+
+    }
+
+
+
+    print("---Baixando html da pagina do IMDB---")
+
+    time.sleep(1)
+
+
+
+    try:
+
+        req = urllib.request.Request(URL, headers=headers)
+
+
+
+        with urllib.request.urlopen(req) as resposta:
+
+            conteudo_html = resposta.read().decode('utf-8')
+
+    except Exception as e:
+
+        print(f"Erro bizzaro: {e}")
+
+        return[]
+
+
+
+    print("HTML baixado com sucesso. Extraindo os títulos...")
+
+
+
+    soup = BeautifulSoup(conteudo_html, 'html.parser')
+
+    filmes_geral_data = []
+
+
+
+    # Seletor Principal: lista de itens
+
+    listar_itens = soup.find_all('li', class_='ipc-metadata-list-summary-item')
+
+
+
+    for item in listar_itens:
+
+        filme_data = {}
+
+
+
+        # EXTRAINDO OS TITULOS DA PAGINA
+
+        IMDB_Titulos = item.find('h3', class_='ipc-title__text')
+
+        if IMDB_Titulos:
+
+            titulo_filmes_completo = IMDB_Titulos.get_text(strip=True)
+
+            filme_data['titulo'] = titulo_filmes_completo
+
+
+
+        # EXTRAINDO A DATA
+
+        IMDB_Anos = item.find('span', class_='sc-b4f120f6-7 hoOxkw cli-title-metadata-item')
+
+        if IMDB_Anos:
+
+            ano_filmes = IMDB_Anos.get_text(strip=True)
+
+
+
+            if ano_filmes and len(ano_filmes) == 4 and ano_filmes.isdigit():
+
+                filme_data['ano'] = ano_filmes
+
+            else:
+
+                filme_data['ano'] = 'N/D'
+
+
+
+        # Extrair NOTA no IMDb
+
+        IMDB_Nota = item.find('span', class_='ipc-rating-star--rating')
+
+        if IMDB_Nota:
+
+            nota_filme = IMDB_Nota.get_text(strip=True)
+
+            filme_data['nota'] = nota_filme
+
+        else:
+
+            filme_data['nota'] = 'N/D'
+
+
+
+        if 'titulo' in filme_data:
+
+            filmes_geral_data.append(filme_data)
+
+
+
+    return filmes_geral_data
+
+
+
+print("\n--- IMDb Top 250: Os 5 Primeiros Filmes (Título, Ano, Nota) ---\n")
+
+dados_Filmes = extrair_dados_imdb()
+
+catalogo = []
+
+
+
+print("FiM DOS EXERCICIOS 1 E 2")
+
+
+
+# ----------------------------------------------------------------------------------------------------------
+
+class TV:
+
+    def __init__(self, titulo: str, ano: int):
+
+        self.titulo = titulo
+
+        self.ano = ano
+
+
+
+    def __str__(self):
+
+        return f"{self.titulo} ({self.ano})"
+
+# ----------------------------------------------------------------------------------------------------------
+
+class Movie(TV):
+
+    def __init__(self, titulo: str, ano: int, nota: float):
+
+        # Chama o construtor da classe pai (TV)
+
+        super().__init__(titulo, ano)
+
+        # Novo atributo: nota do IMDb
+
+        self.nota = nota
+
+
+
+    def __str__(self):
+
+        """
+
+        Sobrescreve o __str__ para incluir a nota: Título (Ano) – Nota: X.X
+
+        """
+
+        return f"{super().__str__()} – Nota: {self.nota}"
+
+   
+
+    def to_dict(self):
+
+        """
+
+        Converte o objeto Movie em um dicionário para ser serializado em JSON.
+
+        """
+
+        return {
+
+            "Tipo": "Movie",
+
+            "titulo": self.titulo,
+
+            "ano": self.ano,
+
+            "nota": self.nota
+
+        }
+
+# ----------------------------------------------------------------------------------------------------------
+
+class Series(TV):
+
+    def __init__(self, titulo: str, ano: int, temporadas: int, episodios: int):
+
+        # Chama o construtor da classe pai (TV)
+
+        super().__init__(titulo, ano)
+
+        # Novos atributos: temporadas e episódios
+
+        self.temporadas = temporadas
+
+        self.episodios = episodios
+
+
+
+    def __str__(self):
+
+        return f"{super().__str__()} – Temporadas: {self.temporadas}, Episódios: {self.episodios}"
+
+
+
+    def to_dict(self):
+
+        """
+
+        Converte o objeto Series em um dicionário para ser serializado em JSON.
+
+        """
+
+        return {
+
+            "Tipo": "Series",
+
+            "titulo": self.titulo,
+
+            "ano": self.ano,
+
+            "temporadas": self.temporadas,
+
+            "episodios": self.episodios
+
+        }
+
+print("FIM DO EXERCICIO 3 E 4")
+
+
+
+# ----------------------------------------------------------------------------------------------------------
+
+#  EXERCICIO 5
+
+print("\n--- 2. Criando 250 Objetos Movie ---")
+
+for dado in dados_Filmes:      
+
+    movie_obj = Movie(
+
+        titulo=dado['titulo'],
+
+        ano=dado['ano'],
+
+        nota=dado['nota']
+
+    )
+
+    catalogo.append(movie_obj)
+
+
+
+# 3. Criar manualmente 2 objetos Series
+
+print("--- 3. Adicionando 2 Objetos Series Fictícios ---")
+
+series1 = Series(titulo="The Witcher", ano=2019, temporadas=3, episodios=24)
+
+series2 = Series(titulo="Arcane", ano=2021, temporadas=1, episodios=9)
+
+
+
+catalogo.append(series1)
+
+catalogo.append(series2)
+
+
+
+
+
+# 4. Percorrer a lista catalogo e exibir todos os itens
+
+print("\n--- 4. Catálogo Completo (Filmes e Séries) ---")
+
+print(f"Total de Itens no Catálogo: {len(catalogo)}\n")
+
+
+
+# Exibe os 10 primeiros e os 2 últimos (Séries) para demonstração
+
+print("--- PRIMEIRAS 10 ENTRADAS (Filmes) ---")
+
+for item in catalogo[:10]:
+
+    print(item)
+
+
+
+print("\n--- ÚLTIMAS 2 ENTRADAS (Séries) ---")
+
+for item in catalogo[-2:]:
+
+    print(item)
+
+
+
+print("\n---- Fim do codigo do Exercício 5 ----")
+
+
+
+# ----------------------------------------------------------------------------------------------------------
+
+#  EXERCICIO 6
+
+Base = declarative_base()
+
+
+
+class MovieModel(Base):
+
+    """
+
+    Modelo SQLAlchemy para a tabela 'movies'.
+
+    """
+
+    __tablename__ = 'movies'
+
+
+
+    # Define os campos (colunas)
+
+    id = Column(Integer, primary_key=True)
+
+    title = Column(String, unique=True, nullable=False) # Garante que o título é único
+
+    year = Column(Integer, nullable=False)
+
+    rating = Column(Float, nullable=False)
+
+
+
+    def __init__(self, title, year, rating):
+
+        self.title = title
+
+        self.year = year
+
+        self.rating = rating
+
+
+
+    def __repr__(self):
+
+        return f"<Movie(title='{self.title}', year={self.year}, rating={self.rating})>"
+
+
+
+
+
+class SeriesModel(Base):
+
+    """
+
+    Modelo SQLAlchemy para a tabela 'series'.
+
+    """
+
+    __tablename__ = 'series'
+
+
+
+    # Define os campos (colunas)
+
+    id = Column(Integer, primary_key=True)
+
+    title = Column(String, unique=True, nullable=False) # Garante que o título é único
+
+    year = Column(Integer, nullable=False)
+
+    seasons = Column(Integer, nullable=False)
+
+    episodes = Column(Integer, nullable=False)
+
+
+
+    def __init__(self, title, year, seasons, episodes):
+
+        self.title = title
+
+        self.year = year
+
+        self.seasons = seasons
+
+        self.episodes = episodes
+
+
+
+    def __repr__(self):
+
+        return f"<Series(title='{self.title}', seasons={self.seasons})>"
+
+
+
+DATABASE_URL = 'sqlite:///imdb.db'
+
+
+
+print("\n--- Exercício 6: Banco de dados imdb.db com SQLAlchemy ---")
+
+
+
+# 1. Configurar o banco de dados (Cria o arquivo imdb.db se não existir)
+
+engine = create_engine(DATABASE_URL)
+
+
+
+# 2. Cria as tabelas 'movies' e 'series' se elas ainda não existirem
+
+Base.metadata.create_all(engine)
+
+print("Banco de dados 'imdb.db' e tabelas criadas/verificadas.")
+
+
+
+# 3. Criar uma sessão para interagir com o DB
+
+Session = sessionmaker(bind=engine)
+
+session = Session()
+
+
+
+dados_filmes = extrair_dados_imdb()
+
+
+
+# 5. Criar e inserir os objetos Movie
+
+print("\n--- Inserindo Filmes na Tabela 'movies' ---")
+
+filmes_inseridos = 0
+
+for dado in dados_filmes:
+
+    try:
+
+        # Tenta converter o ano e a nota
+
+        ano = int(dado['ano'])
+
+        nota_corrigida = dado['nota'].replace(',', '.')
+
+        rating = float(nota_corrigida)
+
+    except ValueError:
+
+        continue # Pula se houver erro nos dados
+
+
+
+    novo_filme = MovieModel(title=dado['titulo'], year=ano, rating=rating)
+
+   
+
+    try:
+
+        session.add(novo_filme)
+
+        session.commit()
+
+        filmes_inseridos += 1
+
+    except IntegrityError:
+
+        # Tratamento de duplicidade (IntegrityError ocorre porque 'title' é unique=True)
+
+        session.rollback()
+
+        # print(f"Filme duplicado (Ignorado): {dado['titulo']}") # Opcional: mostrar ignorados
+
+
+
+print(f"{filmes_inseridos} filmes únicos inseridos/atualizados na tabela 'movies'.")
+
+
+
+# 6. Inserir objetos Series fictícios
+
+print("\n--- Inserindo Séries na Tabela 'series' ---")
+
+series_data = [
+
+    {"titulo": "The Witcher", "ano": 2019, "seasons": 3, "episodes": 24},
+
+    {"titulo": "Arcane", "ano": 2021, "seasons": 1, "episodes": 9}
+
+]
+
+series_inseridas = 0
+
+
+
+for data in series_data:
+
+    nova_serie = SeriesModel(
+
+        title=data['titulo'],
+
+        year=data['ano'],
+
+        seasons=data['seasons'],
+
+        episodes=data['episodes']
+
+    )
+
+    try:
+
+        session.add(nova_serie)
+
+        session.commit()
+
+        series_inseridas += 1
+
+    except IntegrityError:
+
+        session.rollback()
+
+        # print(f"Série duplicada (Ignorada): {data['titulo']}") # Opcional: mostrar ignoradas
+
+
+
+print(f"{series_inseridas} séries únicas inseridas/atualizadas na tabela 'series'.")
+
+
+
+# Fechar a sessão
+
+session.close()
+
+
+
+print("\n---- Fim do codigo do Exercício 6 ----")
+
+
+
+print("\n--- Exercício 7: Lendo Dados do Banco com Pandas ---")
+
+
+
+try:
+
+    # 1. Cria a Engine de Conexão com o Banco de Dados
+
+    engine = create_engine(DATABASE_URL)
+
+    print("Conexão com 'imdb.db' estabelecida.")
+
+
+
+    # 2. Leitura da tabela 'movies' para um DataFrame
+
+    print("\nLendo a tabela 'movies'...")
+
+    # SQL query para selecionar todos os registros da tabela 'movies'
+
+    query_movies = "SELECT * FROM movies"
+
+    df_movies = pd.read_sql(query_movies, engine)
+
+
+
+    # 3. Leitura da tabela 'series' para um outro DataFrame
+
+    print("Lendo a tabela 'series'...")
+
+    query_series = "SELECT * FROM series"
+
+    df_series = pd.read_sql(query_series, engine)
+
+
+
+    # 4. Exibe as 5 primeiras linhas de cada DataFrame
+
+   
+
+    print("\n--- MOVIES DataFrame (Top 5) ---")
+
+    if not df_movies.empty:
+
+        print(df_movies.head())
+
+    else:
+
+        print("DataFrame de filmes vazio.")
+
+
+
+    print("\n--- SERIES DataFrame (Top 5) ---")
+
+    if not df_series.empty:
+
+        print(df_series.head())
+
+    else:
+
+        print("DataFrame de séries vazio.")
+
+
+
+
+
+except FileNotFoundError:
+
+    print(f"\n ERRO: O arquivo do banco de dados '{DATABASE_URL.split('///')[1]}' não foi encontrado.")
+
+    print("Execute o Exercício 6 primeiro para criar o banco de dados.")
+
+
+
+except SQLAlchemyError as e:
+
+    print(f"\n ERRO de SQLAlchemy ao acessar o banco: {e}")
+
+
+
+except Exception as e:
+
+    print(f"\n Ocorreu um erro inesperado: {e}")
+
+
+
+print("\n---- Fim do codigo do Exercício 7 ----")
+
+
+
+print("\n--- Exercício 8: Análise e Exportação de Dados com Pandas ---")
+
+
+
+try:
+
+    # 1. Cria a Engine de Conexão com o Banco de Dados
+
+    engine = create_engine(DATABASE_URL)
+
+
+
+    # 2. Leitura dos dados para DataFrames
+
+    query_movies = "SELECT * FROM movies"
+
+    df_movies = pd.read_sql(query_movies, engine)
+
+
+
+    query_series = "SELECT * FROM series"
+
+    df_series = pd.read_sql(query_series, engine)
+
+   
+
+    print("Dados lidos do 'imdb.db' com sucesso.")
+
+   
+
+except SQLAlchemyError as e:
+
+    print(f"\n ERRO de SQLAlchemy: Não foi possível ler os dados do banco. {e}")
+
+    # Se a leitura falhar, encerramos a execução da análise/exportação
+
+    exit()
+
+
+
+# ----------------------------------------------------
+
+## PARTE 1: ANÁLISE DO DATAFRAME DE FILMES
+
+# ----------------------------------------------------
+
+
+
+print("\n--- 1. Análise: Filmes com Nota > 9.0 ---")
+
+
+
+if df_movies.empty:
+
+    print("DataFrame de filmes vazio. Não é possível realizar a análise.")
+
+else:
+
+    # A. Ordene os filmes pela coluna de nota (rating), do maior para o menor.
+
+    # inplace=True modifica o DataFrame original (opcional)
+
+    df_movies.sort_values(by='rating', ascending=False, inplace=True)
+
+   
+
+    # B. Filtre apenas os filmes com nota maior que 9.0.
+
+    df_top_rated = df_movies[df_movies['rating'] > 9.0]
+
+   
+
+    # C. Exiba os 5 filmes com melhor avaliação após o filtro.
+
+    print(f"Total de filmes encontrados com nota > 9.0: {len(df_top_rated)}")
+
+   
+
+    if not df_top_rated.empty:
+
+        print("\nTOP 5 Filmes (Nota > 9.0):")
+
+        # Exibe os 5 primeiros da lista já ordenada
+
+        print(df_top_rated.head(5))
+
+    else:
+
+        print("Nenhum filme encontrado com nota superior a 9.0.")
+
+
+
+
+
+# ----------------------------------------------------
+
+## PARTE 2: EXPORTAÇÃO DE DADOS
+
+# ----------------------------------------------------
+
+
+
+print("\n--- 2. Exportação de Dados para CSV e JSON ---")
+
+
+
+# Lista de DataFrames e nomes de arquivos
+
+export_data = [
+
+    (df_movies, 'movies'),
+
+    (df_series, 'series')
+
+]
+
+
+
+for df, base_name in export_data:
+
+    if df.empty:
+
+        print(f"Skipping export for {base_name}: DataFrame is empty.")
+
+        continue
+
+
+
+    # --- Exportação para CSV ---
+
+    csv_file = f"{base_name}.csv"
+
+    try:
+
+        # index=False evita salvar a coluna de índice do Pandas no CSV
+
+        df.to_csv(csv_file, index=False)
+
+        print(f" Exportado com sucesso: {csv_file}")
+
+    except Exception as e:
+
+        print(f"ERRO ao salvar {csv_file}: {e}")
+
+
+
+    # --- Exportação para JSON ---
+
+    json_file = f"{base_name}.json"
+
+    try:
+
+        # indent=4 torna o JSON mais legível
+
+        df.to_json(json_file, orient='records', lines=True, indent=4)
+
+        print(f" Exportado com sucesso: {json_file}")
+
+    except Exception as e:
+
+        print(f" ERRO ao salvar {json_file}: {e}")
+
+
+
+print("\n---- Fim do codigo do Exercício 8 ----")
+
+
+
+# --- FUNÇÃO DE CLASSIFICAÇÃO ---
+
+
+
+def classificar_nota(nota: float) -> str:
+
+    """
+
+    Recebe a nota (rating) e devolve uma categoria textual.
+
+    """
+
+    # Garante que a nota seja tratada como float, mesmo que venha como outro tipo.
+
+    try:
+
+        nota = float(nota)
+
+    except (ValueError, TypeError):
+
+        return "Erro na Nota" # Trata dados inválidos
+
+
+
+    if nota >= 9.0:
+
+        return "Obra-prima"
+
+    elif nota >= 8.0:  # 8.0 <= nota < 9.0
+
+        return "Excelente"
+
+    elif nota >= 7.0:  # 7.0 <= nota < 8.0
+
+        return "Bom"
+
+    else:              # nota < 7.0
+
+        return "Mediano"
+
+
+
+# --- EXECUÇÃO DO EXERCÍCIO 9 ---
+
+
+
+DATABASE_URL = 'sqlite:///imdb.db'
+
+
+
+print("\n--- Exercício 9: Classificação Textual das Notas ---")
+
+
+
+try:
+
+    # 1. Cria a Engine e lê a tabela 'movies'
+
+    engine = create_engine(DATABASE_URL)
+
+    query_movies = "SELECT * FROM movies"
+
+    df_movies = pd.read_sql(query_movies, engine)
+
+   
+
+    if df_movies.empty:
+
+        print("DataFrame de filmes vazio. Impossível prosseguir com a classificação.")
+
+        exit()
+
+
+
+    # 2. Ordena os filmes por nota (rating) para garantir que os 10 primeiros sejam os melhores
+
+    # Isso é bom para visualizar a categoria corretamente, mesmo não sendo um requisito explícito aqui
+
+    df_movies.sort_values(by='rating', ascending=False, inplace=True)
+
+
+
+    # 3. Cria a nova coluna 'categoria', aplicando a função 'classificar_nota'
+
+    # O método .apply() aplica a função a cada valor da coluna 'rating'.
+
+    df_movies['categoria'] = df_movies['rating'].apply(classificar_nota)
+
+   
+
+    print("Nova coluna 'categoria' criada com sucesso.")
+
+
+
+    # 4. Mostra na tela as colunas title, rating e categoria dos 10 primeiros filmes
+
+    print("\n--- Top 10 Filmes Classificados ---")
+
+   
+
+    df_exibicao = df_movies[['title', 'rating', 'categoria']].head(10)
+
+    print(df_exibicao)
+
+
+
+except SQLAlchemyError as e:
+
+    print(f"\n ERRO de SQLAlchemy: Não foi possível ler os dados do banco. {e}")
+
+except Exception as e:
+
+    print(f"\n Ocorreu um erro inesperado durante a classificação: {e}")
+
+
+
+print("\n---- Fim do codigo do Exercício 9 ----")
+
+
+
+# --- FUNÇÃO DE CLASSIFICAÇÃO (Reutilizada do Exercício 9) ---
+
+
+
+def classificar_nota(nota: float) -> str:
+
+    """
+
+    Recebe a nota (rating) e devolve uma categoria textual.
+
+    """
+
+    try:
+
+        nota = float(nota)
+
+    except (ValueError, TypeError):
+
+        return "Erro na Nota"
+
+
+
+    if nota >= 9.0:
+
+        return "Obra-prima"
+
+    elif nota >= 8.0:
+
+        return "Excelente"
+
+    elif nota >= 7.0:
+
+        return "Bom"
+
+    else:
+
+        return "Mediano"
+
+
+
+# --- EXECUÇÃO DO EXERCÍCIO 10 ---
+
+
+
+DATABASE_URL = 'sqlite:///imdb.db'
+
+
+
+print("\n--- Exercício 10: Resumo de Filmes por Categoria e Ano ---")
+
+
+
+try:
+
+    # 1. Cria a Engine e lê a tabela 'movies'
+
+    engine = create_engine(DATABASE_URL)
+
+    query_movies = "SELECT * FROM movies"
+
+    df_movies = pd.read_sql(query_movies, engine)
+
+   
+
+    if df_movies.empty:
+
+        print("DataFrame de filmes vazio. Impossível criar o resumo.")
+
+        exit()
+
+
+
+    # Garante que a coluna 'year' seja um número inteiro (requisito para a tabela)
+
+    df_movies['year'] = pd.to_numeric(df_movies['year'], errors='coerce').fillna(0).astype(int)
+
+
+
+    # 2. Cria a coluna 'categoria' (Requisito do Exercício 9)
+
+    df_movies['categoria'] = df_movies['rating'].apply(classificar_nota)
+
+
+
+    # 3. Cria o Resumo em formato de Tabela (Tabela de Frequência Cruzada)
+
+    # A tabela conta quantos filmes (qualquer coluna, 'title' é uma boa)
+
+    # existem para cada combinação de 'categoria' (linhas) e 'year' (colunas).
+
+   
+
+    # Prepara os dados para serem contados
+
+    resumo_df = df_movies.groupby(['categoria', 'year']).size().reset_index(name='Contagem')
+
+
+
+    # Transforma o resultado em uma Tabela Dinâmica, onde o ano é a coluna
+
+    tabela_resumo = resumo_df.pivot_table(
+
+        index='categoria',
+
+        columns='year',
+
+        values='Contagem',
+
+        fill_value=0 # Preenche as células vazias (sem filmes naquele ano/categoria) com 0
+
+    )
+
+
+
+    # 4. Exibe o Resumo de forma organizada
+
+    print("\n--- Tabela Resumo: Filmes por Categoria e Ano de Lançamento ---")
+
+   
+
+    # Ordena as linhas (categorias) para uma visualização lógica
+
+    ordem_categorias = ["Obra-prima", "Excelente", "Bom", "Mediano"]
+
+    # Reindexa a tabela para garantir a ordem
+
+    tabela_resumo = tabela_resumo.reindex(ordem_categorias, fill_value=0)
+
+   
+
+    print(tabela_resumo)
+
+   
+
+    # Opcional: Mostra a soma total de filmes por categoria
+
+    print("\nTotal de Filmes por Categoria:")
+
+    print(tabela_resumo.sum(axis=1))
+
+
+
+except SQLAlchemyError as e:
+
+    print(f"\n ERRO de SQLAlchemy: Não foi possível ler os dados do banco. {e}")
+
+except Exception as e:
+
+    print(f"\n Ocorreu um erro inesperado: {e}")
+
+
+
+print("\n---- Fim do codigo do Exercício 10 ----")

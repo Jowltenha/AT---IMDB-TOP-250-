@@ -1,0 +1,5 @@
+{
+    "IMDB_URL": "https://www.imdb.com/pt/chart/top/",
+    "N_FILMES": 250,
+    "DATABASE_URL": "sqlite:///imdb.db"
+}
