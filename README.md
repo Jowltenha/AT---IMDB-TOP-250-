@@ -22,5 +22,11 @@ Você precisa ter o Python 3.x instalado.
 Crie um ambiente virtual (opcional, mas recomendado) e instale as bibliotecas listadas no `requirements.txt`:
 
 ```bash
-# Instala as dependências listadas no arquivo requerimentos.txt
-pip install -r requirements.txt
+
+Lista as dependências que precisam ser instaladas.
+
+requests # (Opcional, se você for trocar urllib por requests)
+urllib3 # (Módulo usado no scraping, mas geralmente incluso no ambiente)
+beautifulsoup4
+pandas
+SQLAlchemy
